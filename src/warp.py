@@ -17,7 +17,6 @@ BASE_HEADERS: dict[str, str] = {
     'User-Agent': 'okhttp/3.12.1',
 }
 
-
 class RegisterDataAccount(TypedDict):
     id: str
     account_type: str
@@ -32,33 +31,27 @@ class RegisterDataAccount(TypedDict):
     role: str
     license: str
 
-
 class RegisterDataConfigPeerEndpoint(TypedDict):
     v4: str
     v6: str
     host: str
 
-
 class RegisterDataConfigPeer(TypedDict):
     public_key: str
     endpoint: RegisterDataConfigPeerEndpoint
-
 
 class RegisterDataInterfaceAddresses(TypedDict):
     v4: str
     v6: str
 
-
 class RegisterDataInterface(TypedDict):
     addresses: RegisterDataInterfaceAddresses
-
 
 class RegisterDataConfig(TypedDict):
     client_id: str
     peers: list[RegisterDataConfigPeer]
     interface: RegisterDataInterface
     services: Any # we don't use it, so i think it's acceptable to use any
-
 
 class RegisterData(TypedDict):
     id: str
@@ -79,7 +72,6 @@ class RegisterData(TypedDict):
     install_id: str
     fcm_token: str
 
-
 class GetInfoData(TypedDict):
     id: str
     account_type: str
@@ -93,7 +85,6 @@ class GetInfoData(TypedDict):
     role: str
     license: str
 
-
 async def register(path: str, session: ClientSession, data: dict[str, str] = {}) -> RegisterData:
     response: ClientResponse = await session.post(
         '/{}/reg'.format(path),
@@ -105,27 +96,26 @@ async def register(path: str, session: ClientSession, data: dict[str, str] = {})
     )
 
     if response.status != 200:
-        match response.status:
-            case 403:
-                response_text: str = 'Access denied, proxy or your IP is probably blocked on API or your proxy has blocked access to API'
-            case 429:
-                response_text: str = 'Too Many Requests, too much keys was generated for last minute from this proxy or your IP'
-            case 500:
-                response_text: str = 'Internal Server Error: ' + await response.text()
-            case 503:
-                response_text: str = 'Service Unavailable, maybe Cloudflare API is down, try again'
-            case 504:
-                response_text: str = 'Gateway Timeout, maybe Cloudflare API is down, try again'
-            case _:
-                response_text: str =  await response.text()
-
-        response.close()
+        response_text = await handle_response_error(response)
         raise Exception('Failed to register: {} {}'.format(response.status, response_text))
 
     json: RegisterData = await response.json()
 
     return json
 
+async def handle_response_error(response: ClientResponse) -> str:
+    if response.status == 403:
+        return 'Access denied, proxy or your IP is probably blocked on API or your proxy has blocked access to API'
+    elif response.status == 429:
+        return 'Too Many Requests, too much keys was generated for last minute from this proxy or your IP'
+    elif response.status == 500:
+        return 'Internal Server Error: ' + await response.text()
+    elif response.status == 503:
+        return 'Service Unavailable, maybe Cloudflare API is down, try again'
+    elif response.status == 504:
+        return 'Gateway Timeout, maybe Cloudflare API is down, try again'
+    else:
+        return await response.text()
 
 async def add_key(path: str, session: ClientSession, reg_id: str, token: str, key: str) -> None:
     response: ClientResponse = await session.put(
@@ -142,9 +132,7 @@ async def add_key(path: str, session: ClientSession, reg_id: str, token: str, ke
 
     if response.status != 200:
         response_text = await response.text()
-        response.close()
         raise Exception('Failed to add key: {} {}'.format(response.status, response_text))
-
 
 async def patch_account(path: str, session: ClientSession, reg_id: str, token: str, body: Any) -> None:
     response: ClientResponse = await session.patch(
@@ -158,9 +146,7 @@ async def patch_account(path: str, session: ClientSession, reg_id: str, token: s
     )
 
     if response.status != 200:
-        response.close()
         raise Exception('Failed to set account active: {}'.format(response.status))
-
 
 async def delete_account(path: str, session: ClientSession, reg_id: str, token: str) -> None:
     response: ClientResponse = await session.delete(
@@ -172,9 +158,7 @@ async def delete_account(path: str, session: ClientSession, reg_id: str, token: 
     )
 
     if response.status != 204:
-        response.close()
         raise Exception('Failed to delete account: {}'.format(response.status))
-
 
 async def get_data(path: str, session: ClientSession, reg_id: str, token: str) -> RegisterData:
     response: ClientResponse = await session.get(
@@ -187,13 +171,11 @@ async def get_data(path: str, session: ClientSession, reg_id: str, token: str) -
 
     if response.status != 200:
         response_text = await response.text()
-        response.close()
         raise Exception('Failed to get account: {} {}'.format(response.status, response_text))
 
     json: RegisterData = await response.json()
 
     return json
-
 
 async def get_account(path: str, session: ClientSession, reg_id: str, token: str) -> GetInfoData:
     response: ClientResponse = await session.get(
@@ -206,13 +188,11 @@ async def get_account(path: str, session: ClientSession, reg_id: str, token: str
 
     if response.status != 200:
         response_text = await response.text()
-        response.close()
         raise Exception('Failed to get account: {} {}'.format(response.status, response_text))
 
     json: GetInfoData = await response.json()
 
     return json
-
 
 async def clone_key(key: str, proxy_url: Optional[str], device_model: Optional[str]) -> Tuple[GetInfoData, RegisterData,  Optional[str]]:
     connector: ProxyConnector | None = ProxyConnector.from_url(
@@ -279,4 +259,3 @@ async def clone_key(key: str, proxy_url: Optional[str], device_model: Optional[s
             await delete_account(path, session, register_data['id'], register_data['token'])
 
         return information, register_data, private_key
-
