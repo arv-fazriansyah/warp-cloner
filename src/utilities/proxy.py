@@ -1,12 +1,12 @@
 from itertools import cycle
+from typing import List, Optional
 
 from config import config
 
+class ProxyDispatcher:
+    proxies: Optional[List[str]] = None
 
-class ProxyDispatcher():
-    proxies: list[str] | None = None
-
-    def __init__(self, proxy_file: str | None) -> None:
+    def __init__(self, proxy_file: Optional[str] = None) -> None:
         if proxy_file is None or proxy_file == '':
             return
 
@@ -15,11 +15,10 @@ class ProxyDispatcher():
 
         self.proxy_cycle = cycle(self.proxies)
 
-    def get_proxy(self) -> str | None:
+    def get_proxy(self) -> Optional[str]:
         if self.proxies is None:
             return None
 
         return next(self.proxy_cycle)
 
-
-proxy_dispatcher: ProxyDispatcher = ProxyDispatcher(config.PROXY_FILE)
+proxy_dispatcher = ProxyDispatcher(config.PROXY_FILE)
