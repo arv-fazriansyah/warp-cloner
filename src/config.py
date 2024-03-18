@@ -3,9 +3,10 @@ from pydantic_settings import (
     BaseSettings,
     SettingsConfigDict,
 )
+from typing import Union
 
 class Settings(BaseSettings):
-    model_config =  SettingsConfigDict(env_file='.env', env_file_encoding='utf-8')
+    model_config = SettingsConfigDict(env_file='.env', env_file_encoding='utf-8')
 
     BASE_KEYS: list[str] = Field(
         validation_alias='BASE_KEYS',
@@ -23,7 +24,7 @@ class Settings(BaseSettings):
         ]
     )
     THREADS_COUNT: int = Field(validation_alias='THREADS_COUNT', default=1)
-    PROXY_FILE: str | None = Field(validation_alias='PROXY_FILE', default=None)
+    PROXY_FILE: Union[str, None] = Field(validation_alias='PROXY_FILE', default=None)
     DEVICE_MODELS: list[str] = Field(validation_alias='DEVICE_MODELS', default=[])
     SAVE_WIREGUARD_VARIABLES: bool = Field(validation_alias='SAVE_WIREGUARD_VARIABLES', default=False)
     DELAY: int = Field(validation_alias='DELAY', default=25)
